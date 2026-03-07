@@ -82,3 +82,76 @@ fn test_shielded_pool_rejects_duplicate_nullifier() {
         },
     };
 }
+
+#[test]
+fn test_shielded_pool_accepts_valid_proofs_for_lifecycle() {
+    let pool_address = deploy_contract("ShieldedPool");
+    let verifier_address = deploy_contract("MockProofVerifier");
+    let pool = IShieldedPoolDispatcher { contract_address: pool_address };
+
+    pool.set_verifier(verifier_address);
+
+    pool.deposit(0x111, 0xAA, 0x9001, 0x9001);
+    assert(pool.is_root_known(0x111), 'Deposit root should be known');
+
+    pool.spend(0x111, 0xA1, 0x222, 0xBB, 0x9002, 0x9002);
+    assert(pool.is_root_known(0x222), 'Spend root should be known');
+    assert(pool.is_nullifier_spent(0xA1), 'Spend nullifier should be spent');
+
+    pool.withdraw(0x222, 0xA2, verifier_address, 10_u128, 0x9003, 0x9003);
+    assert(pool.is_nullifier_spent(0xA2), 'Withdraw nullifier spent');
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_shielded_pool_rejects_invalid_proof() {
+    let pool_address = deploy_contract("ShieldedPool");
+    let verifier_address = deploy_contract("MockProofVerifier");
+    let safe_pool = IShieldedPoolSafeDispatcher { contract_address: pool_address };
+
+    safe_pool.set_verifier(verifier_address).unwrap();
+
+    match safe_pool.deposit(0x123, 0xAB, 0x9004, 0xDEAD) {
+        Result::Ok(_) => core::panic_with_felt252('Invalid proof should fail'),
+        Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Invalid proof', *panic_data.at(0));
+        },
+    };
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_shielded_pool_rejects_root_mismatch() {
+    let pool_address = deploy_contract("ShieldedPool");
+    let verifier_address = deploy_contract("MockProofVerifier");
+    let safe_pool = IShieldedPoolSafeDispatcher { contract_address: pool_address };
+
+    safe_pool.set_verifier(verifier_address).unwrap();
+    safe_pool.deposit(0x444, 0xAB, 0x9100, 0x9100).unwrap();
+
+    match safe_pool.spend(0x999, 0xB1, 0x555, 0xBC, 0x9101, 0x9101) {
+        Result::Ok(_) => core::panic_with_felt252('Should have failed unknown root'),
+        Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Unknown root', *panic_data.at(0));
+        },
+    };
+}
+
+#[test]
+#[feature("safe_dispatcher")]
+fn test_shielded_pool_rejects_double_spend_with_verifier_path() {
+    let pool_address = deploy_contract("ShieldedPool");
+    let verifier_address = deploy_contract("MockProofVerifier");
+    let safe_pool = IShieldedPoolSafeDispatcher { contract_address: pool_address };
+
+    safe_pool.set_verifier(verifier_address).unwrap();
+    safe_pool.deposit(0x777, 0xCD, 0x9200, 0x9200).unwrap();
+    safe_pool.spend(0x777, 0xD1, 0x888, 0xEF, 0x9201, 0x9201).unwrap();
+
+    match safe_pool.withdraw(0x888, 0xD1, verifier_address, 5_u128, 0x9202, 0x9202) {
+        Result::Ok(_) => core::panic_with_felt252('Should have failed double spend'),
+        Result::Err(panic_data) => {
+            assert(*panic_data.at(0) == 'Nullifier already spent', *panic_data.at(0));
+        },
+    };
+}

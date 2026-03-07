@@ -223,19 +223,56 @@ mod PayrollDispatcher {
 }
 
 #[starknet::interface]
+pub trait IProofVerifier<TContractState> {
+    fn verify(
+        self: @TContractState, proof_hash: felt252, public_inputs_hash: felt252,
+    ) -> bool;
+}
+
+#[starknet::interface]
 pub trait IShieldedPool<TContractState> {
     fn set_dispatcher(ref self: TContractState, dispatcher: starknet::ContractAddress);
+    fn set_verifier(ref self: TContractState, verifier: starknet::ContractAddress);
     fn set_denomination_mask(ref self: TContractState, mask: felt252);
+    fn deposit(
+        ref self: TContractState,
+        new_root: felt252,
+        commitment: felt252,
+        proof_hash: felt252,
+        public_inputs_hash: felt252,
+    );
+    fn spend(
+        ref self: TContractState,
+        merkle_root: felt252,
+        nullifier: felt252,
+        new_root: felt252,
+        new_commitment: felt252,
+        proof_hash: felt252,
+        public_inputs_hash: felt252,
+    );
+    fn withdraw(
+        ref self: TContractState,
+        merkle_root: felt252,
+        nullifier: felt252,
+        recipient: starknet::ContractAddress,
+        amount: u128,
+        proof_hash: felt252,
+        public_inputs_hash: felt252,
+    );
     fn register_root(ref self: TContractState, root: felt252);
     fn spend_nullifier(ref self: TContractState, nullifier: felt252);
     fn is_root_known(self: @TContractState, root: felt252) -> bool;
     fn is_nullifier_spent(self: @TContractState, nullifier: felt252) -> bool;
-    fn get_state(self: @TContractState) -> (starknet::ContractAddress, felt252, felt252, u64);
+    fn get_verifier(self: @TContractState) -> starknet::ContractAddress;
+    fn get_state(
+        self: @TContractState,
+    ) -> (starknet::ContractAddress, starknet::ContractAddress, felt252, felt252, u64);
 }
 
 #[starknet::contract]
 mod ShieldedPool {
     use core::num::traits::Zero;
+    use super::{IProofVerifierDispatcher, IProofVerifierDispatcherTrait};
     use starknet::ContractAddress;
     use starknet::get_caller_address;
     use starknet::storage::{
@@ -246,6 +283,7 @@ mod ShieldedPool {
     #[storage]
     struct Storage {
         dispatcher: ContractAddress,
+        verifier: ContractAddress,
         latest_root: felt252,
         denomination_mask: felt252,
         root_count: u64,
@@ -257,7 +295,11 @@ mod ShieldedPool {
     #[derive(Drop, starknet::Event)]
     enum Event {
         DispatcherUpdated: DispatcherUpdated,
+        VerifierUpdated: VerifierUpdated,
         DenominationMaskUpdated: DenominationMaskUpdated,
+        DepositProcessed: DepositProcessed,
+        SpendProcessed: SpendProcessed,
+        WithdrawProcessed: WithdrawProcessed,
         RootRegistered: RootRegistered,
         NullifierSpent: NullifierSpent,
     }
@@ -271,6 +313,32 @@ mod ShieldedPool {
     #[derive(Drop, starknet::Event)]
     struct DenominationMaskUpdated {
         mask: felt252,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct VerifierUpdated {
+        old_verifier: ContractAddress,
+        new_verifier: ContractAddress,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct DepositProcessed {
+        commitment: felt252,
+        new_root: felt252,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct SpendProcessed {
+        nullifier: felt252,
+        new_commitment: felt252,
+        new_root: felt252,
+    }
+
+    #[derive(Drop, starknet::Event)]
+    struct WithdrawProcessed {
+        nullifier: felt252,
+        recipient: ContractAddress,
+        amount: u128,
     }
 
     #[derive(Drop, starknet::Event)]
@@ -301,6 +369,15 @@ mod ShieldedPool {
             self.emit(DispatcherUpdated { old_dispatcher, new_dispatcher: dispatcher });
         }
 
+        fn set_verifier(ref self: ContractState, verifier: ContractAddress) {
+            assert_only_dispatcher(@self);
+            assert(!verifier.is_zero(), 'Invalid verifier');
+
+            let old_verifier = self.verifier.read();
+            self.verifier.write(verifier);
+            self.emit(VerifierUpdated { old_verifier, new_verifier: verifier });
+        }
+
         fn set_denomination_mask(ref self: ContractState, mask: felt252) {
             assert_only_dispatcher(@self);
             assert(mask != 0, 'Invalid mask');
@@ -308,23 +385,69 @@ mod ShieldedPool {
             self.emit(DenominationMaskUpdated { mask });
         }
 
+        fn deposit(
+            ref self: ContractState,
+            new_root: felt252,
+            commitment: felt252,
+            proof_hash: felt252,
+            public_inputs_hash: felt252,
+        ) {
+            assert_only_dispatcher(@self);
+            assert(new_root != 0, 'Invalid root');
+            assert(commitment != 0, 'Invalid commitment');
+            assert_valid_proof(@self, proof_hash, public_inputs_hash);
+
+            register_root_internal(ref self, new_root);
+            self.emit(DepositProcessed { commitment, new_root });
+        }
+
+        fn spend(
+            ref self: ContractState,
+            merkle_root: felt252,
+            nullifier: felt252,
+            new_root: felt252,
+            new_commitment: felt252,
+            proof_hash: felt252,
+            public_inputs_hash: felt252,
+        ) {
+            assert_only_dispatcher(@self);
+            assert(self.known_roots.read(merkle_root), 'Unknown root');
+            assert(new_root != 0, 'Invalid root');
+            assert(new_commitment != 0, 'Invalid commitment');
+            assert_valid_proof(@self, proof_hash, public_inputs_hash);
+
+            spend_nullifier_internal(ref self, nullifier);
+            register_root_internal(ref self, new_root);
+            self.emit(SpendProcessed { nullifier, new_commitment, new_root });
+        }
+
+        fn withdraw(
+            ref self: ContractState,
+            merkle_root: felt252,
+            nullifier: felt252,
+            recipient: ContractAddress,
+            amount: u128,
+            proof_hash: felt252,
+            public_inputs_hash: felt252,
+        ) {
+            assert_only_dispatcher(@self);
+            assert(self.known_roots.read(merkle_root), 'Unknown root');
+            assert(!recipient.is_zero(), 'Invalid recipient');
+            assert(amount != 0_u128, 'Invalid amount');
+            assert_valid_proof(@self, proof_hash, public_inputs_hash);
+
+            spend_nullifier_internal(ref self, nullifier);
+            self.emit(WithdrawProcessed { nullifier, recipient, amount });
+        }
+
         fn register_root(ref self: ContractState, root: felt252) {
             assert_only_dispatcher(@self);
-            assert(root != 0, 'Invalid root');
-
-            self.latest_root.write(root);
-            self.known_roots.write(root, true);
-            self.root_count.write(self.root_count.read() + 1_u64);
-            self.emit(RootRegistered { root });
+            register_root_internal(ref self, root);
         }
 
         fn spend_nullifier(ref self: ContractState, nullifier: felt252) {
             assert_only_dispatcher(@self);
-            assert(nullifier != 0, 'Invalid nullifier');
-            assert(!self.nullifiers.read(nullifier), 'Nullifier already spent');
-
-            self.nullifiers.write(nullifier, true);
-            self.emit(NullifierSpent { nullifier });
+            spend_nullifier_internal(ref self, nullifier);
         }
 
         fn is_root_known(self: @ContractState, root: felt252) -> bool {
@@ -335,9 +458,14 @@ mod ShieldedPool {
             self.nullifiers.read(nullifier)
         }
 
-        fn get_state(self: @ContractState) -> (ContractAddress, felt252, felt252, u64) {
+        fn get_verifier(self: @ContractState) -> ContractAddress {
+            self.verifier.read()
+        }
+
+        fn get_state(self: @ContractState) -> (ContractAddress, ContractAddress, felt252, felt252, u64) {
             (
                 self.dispatcher.read(),
+                self.verifier.read(),
                 self.latest_root.read(),
                 self.denomination_mask.read(),
                 self.root_count.read(),
@@ -347,5 +475,45 @@ mod ShieldedPool {
 
     fn assert_only_dispatcher(self: @ContractState) {
         assert(get_caller_address() == self.dispatcher.read(), 'Only dispatcher');
+    }
+
+    fn assert_valid_proof(
+        self: @ContractState, proof_hash: felt252, public_inputs_hash: felt252,
+    ) {
+        let verifier_address = self.verifier.read();
+        assert(!verifier_address.is_zero(), 'Verifier not set');
+
+        let verifier = IProofVerifierDispatcher { contract_address: verifier_address };
+        assert(verifier.verify(proof_hash, public_inputs_hash), 'Invalid proof');
+    }
+
+    fn register_root_internal(ref self: ContractState, root: felt252) {
+        assert(root != 0, 'Invalid root');
+        self.latest_root.write(root);
+        self.known_roots.write(root, true);
+        self.root_count.write(self.root_count.read() + 1_u64);
+        self.emit(RootRegistered { root });
+    }
+
+    fn spend_nullifier_internal(ref self: ContractState, nullifier: felt252) {
+        assert(nullifier != 0, 'Invalid nullifier');
+        assert(!self.nullifiers.read(nullifier), 'Nullifier already spent');
+        self.nullifiers.write(nullifier, true);
+        self.emit(NullifierSpent { nullifier });
+    }
+}
+
+#[starknet::contract]
+mod MockProofVerifier {
+    #[storage]
+    struct Storage {}
+
+    #[abi(embed_v0)]
+    impl MockProofVerifierImpl of super::IProofVerifier<ContractState> {
+        fn verify(
+            self: @ContractState, proof_hash: felt252, public_inputs_hash: felt252,
+        ) -> bool {
+            proof_hash == public_inputs_hash
+        }
     }
 }
