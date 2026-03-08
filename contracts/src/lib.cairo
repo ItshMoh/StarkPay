@@ -99,9 +99,9 @@ mod PayrollDispatcher {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
-        let caller = get_caller_address();
-        self.employer.write(caller);
+    fn constructor(ref self: ContractState, employer: ContractAddress) {
+        assert(!employer.is_zero(), 'Invalid employer');
+        self.employer.write(employer);
         self.is_paused.write(false);
         self.next_batch_id.write(1);
         self.max_batch_recipients.write(1_000_u32);
@@ -352,9 +352,9 @@ mod ShieldedPool {
     }
 
     #[constructor]
-    fn constructor(ref self: ContractState) {
-        let caller = get_caller_address();
-        self.dispatcher.write(caller);
+    fn constructor(ref self: ContractState, dispatcher: ContractAddress) {
+        assert(!dispatcher.is_zero(), 'Invalid dispatcher');
+        self.dispatcher.write(dispatcher);
         self.denomination_mask.write(0x7);
     }
 

@@ -1,5 +1,6 @@
 use snforge_std::{ContractClassTrait, DeclareResultTrait, declare};
 use starknet::ContractAddress;
+use starknet::get_contract_address;
 
 use contracts::IPayrollDispatcherDispatcher;
 use contracts::IPayrollDispatcherDispatcherTrait;
@@ -10,16 +11,37 @@ use contracts::IShieldedPoolDispatcherTrait;
 use contracts::IShieldedPoolSafeDispatcher;
 use contracts::IShieldedPoolSafeDispatcherTrait;
 
-fn deploy_contract(name: ByteArray) -> ContractAddress {
+fn deploy_contract(name: ByteArray, constructor_calldata: Array<felt252>) -> ContractAddress {
     let contract = declare(name).unwrap().contract_class();
-    let (contract_address, _) = contract.deploy(@ArrayTrait::new()).unwrap();
+    let (contract_address, _) = contract.deploy(@constructor_calldata).unwrap();
     contract_address
+}
+
+fn current_test_address_felt() -> felt252 {
+    let current: ContractAddress = get_contract_address();
+    current.into()
+}
+
+fn deploy_dispatcher() -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    calldata.append(current_test_address_felt());
+    deploy_contract("PayrollDispatcher", calldata)
+}
+
+fn deploy_pool() -> ContractAddress {
+    let mut calldata = ArrayTrait::new();
+    calldata.append(current_test_address_felt());
+    deploy_contract("ShieldedPool", calldata)
+}
+
+fn deploy_mock_verifier() -> ContractAddress {
+    deploy_contract("MockProofVerifier", ArrayTrait::new())
 }
 
 #[test]
 fn test_dispatcher_queue_and_execute_batch() {
-    let dispatcher_address = deploy_contract("PayrollDispatcher");
-    let pool_address = deploy_contract("ShieldedPool");
+    let dispatcher_address = deploy_dispatcher();
+    let pool_address = deploy_pool();
 
     let dispatcher = IPayrollDispatcherDispatcher { contract_address: dispatcher_address };
     dispatcher.set_pool(pool_address);
@@ -42,7 +64,7 @@ fn test_dispatcher_queue_and_execute_batch() {
 #[test]
 #[feature("safe_dispatcher")]
 fn test_dispatcher_policy_rejects_large_batch() {
-    let dispatcher_address = deploy_contract("PayrollDispatcher");
+    let dispatcher_address = deploy_dispatcher();
     let safe_dispatcher = IPayrollDispatcherSafeDispatcher { contract_address: dispatcher_address };
 
     safe_dispatcher.set_policy(2_u32, 500_u128).unwrap();
@@ -57,7 +79,7 @@ fn test_dispatcher_policy_rejects_large_batch() {
 
 #[test]
 fn test_shielded_pool_root_and_nullifier_lifecycle() {
-    let pool_address = deploy_contract("ShieldedPool");
+    let pool_address = deploy_pool();
     let pool = IShieldedPoolDispatcher { contract_address: pool_address };
 
     pool.register_root(0xABC);
@@ -70,7 +92,7 @@ fn test_shielded_pool_root_and_nullifier_lifecycle() {
 #[test]
 #[feature("safe_dispatcher")]
 fn test_shielded_pool_rejects_duplicate_nullifier() {
-    let pool_address = deploy_contract("ShieldedPool");
+    let pool_address = deploy_pool();
     let safe_pool = IShieldedPoolSafeDispatcher { contract_address: pool_address };
 
     safe_pool.spend_nullifier(0xB2).unwrap();
@@ -85,8 +107,8 @@ fn test_shielded_pool_rejects_duplicate_nullifier() {
 
 #[test]
 fn test_shielded_pool_accepts_valid_proofs_for_lifecycle() {
-    let pool_address = deploy_contract("ShieldedPool");
-    let verifier_address = deploy_contract("MockProofVerifier");
+    let pool_address = deploy_pool();
+    let verifier_address = deploy_mock_verifier();
     let pool = IShieldedPoolDispatcher { contract_address: pool_address };
 
     pool.set_verifier(verifier_address);
@@ -105,8 +127,8 @@ fn test_shielded_pool_accepts_valid_proofs_for_lifecycle() {
 #[test]
 #[feature("safe_dispatcher")]
 fn test_shielded_pool_rejects_invalid_proof() {
-    let pool_address = deploy_contract("ShieldedPool");
-    let verifier_address = deploy_contract("MockProofVerifier");
+    let pool_address = deploy_pool();
+    let verifier_address = deploy_mock_verifier();
     let safe_pool = IShieldedPoolSafeDispatcher { contract_address: pool_address };
 
     safe_pool.set_verifier(verifier_address).unwrap();
@@ -122,8 +144,8 @@ fn test_shielded_pool_rejects_invalid_proof() {
 #[test]
 #[feature("safe_dispatcher")]
 fn test_shielded_pool_rejects_root_mismatch() {
-    let pool_address = deploy_contract("ShieldedPool");
-    let verifier_address = deploy_contract("MockProofVerifier");
+    let pool_address = deploy_pool();
+    let verifier_address = deploy_mock_verifier();
     let safe_pool = IShieldedPoolSafeDispatcher { contract_address: pool_address };
 
     safe_pool.set_verifier(verifier_address).unwrap();
@@ -140,8 +162,8 @@ fn test_shielded_pool_rejects_root_mismatch() {
 #[test]
 #[feature("safe_dispatcher")]
 fn test_shielded_pool_rejects_double_spend_with_verifier_path() {
-    let pool_address = deploy_contract("ShieldedPool");
-    let verifier_address = deploy_contract("MockProofVerifier");
+    let pool_address = deploy_pool();
+    let verifier_address = deploy_mock_verifier();
     let safe_pool = IShieldedPoolSafeDispatcher { contract_address: pool_address };
 
     safe_pool.set_verifier(verifier_address).unwrap();
