@@ -1,5 +1,5 @@
 export const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000';
+  import.meta.env.VITE_API_BASE_URL ?? 'https://stark-pay-api.vercel.app';
 
 export const PAYROLL_DISPATCHER_ADDRESS =
   import.meta.env.VITE_PAYROLL_DISPATCHER_ADDRESS ??
