@@ -1,7 +1,7 @@
 export type DenominationBundle = {
-  note_0_10: number;
-  note_0_05: number;
-  note_0_01: number;
+  note_5: number;
+  note_2: number;
+  note_1: number;
   totalNotes: number;
 };
 
@@ -46,6 +46,7 @@ export type StoredReceipt = {
   receiptId: string;
   createdAt: string;
   encryptedBlob: EncryptedBlob;
+  walletAddress: string;
 };
 
 export type CreatedReceipt = {

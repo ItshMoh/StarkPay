@@ -1,19 +1,19 @@
 import type { DenominationBundle } from "./types.js";
 
-const UNIT_SCALE = 100;
-const DENOM_0_10 = 10;
-const DENOM_0_05 = 5;
-const DENOM_0_01 = 1;
+const UNIT_SCALE = 1_000_000;
+const DENOM_5 = 5;
+const DENOM_2 = 2;
+const DENOM_1 = 1;
 
 export function parseAmountToUnits(amount: string): number {
   const normalized = amount.trim();
-  if (!/^\d+(?:\.\d{1,2})?$/.test(normalized)) {
-    throw new Error("Amount must be a positive decimal with up to 2 decimals");
+  if (!/^\d+(?:\.\d{1,6})?$/.test(normalized)) {
+    throw new Error("Amount must be a positive decimal with up to 6 decimals");
   }
 
   const [wholeRaw, fractionRaw = ""] = normalized.split(".");
   const whole = Number(wholeRaw);
-  const fraction = Number((fractionRaw + "00").slice(0, 2));
+  const fraction = Number((fractionRaw + "000000").slice(0, 6));
 
   if (!Number.isInteger(whole) || !Number.isInteger(fraction)) {
     throw new Error("Amount is invalid");
@@ -29,7 +29,7 @@ export function parseAmountToUnits(amount: string): number {
 
 export function formatUnits(units: number): string {
   const whole = Math.floor(units / UNIT_SCALE);
-  const fraction = String(units % UNIT_SCALE).padStart(2, "0");
+  const fraction = String(units % UNIT_SCALE).padStart(6, "0");
   return `${whole}.${fraction}`;
 }
 
@@ -40,23 +40,23 @@ export function toDenominationBundle(amountUnits: number): DenominationBundle {
 
   let remainder = amountUnits;
 
-  const note_0_10 = Math.floor(remainder / DENOM_0_10);
-  remainder %= DENOM_0_10;
+  const note_5 = Math.floor(remainder / DENOM_5);
+  remainder %= DENOM_5;
 
-  const note_0_05 = Math.floor(remainder / DENOM_0_05);
-  remainder %= DENOM_0_05;
+  const note_2 = Math.floor(remainder / DENOM_2);
+  remainder %= DENOM_2;
 
-  const note_0_01 = Math.floor(remainder / DENOM_0_01);
-  remainder %= DENOM_0_01;
+  const note_1 = Math.floor(remainder / DENOM_1);
+  remainder %= DENOM_1;
 
   if (remainder !== 0) {
     throw new Error("Amount is not representable with fixed denominations");
   }
 
   return {
-    note_0_10,
-    note_0_05,
-    note_0_01,
-    totalNotes: note_0_10 + note_0_05 + note_0_01,
+    note_5,
+    note_2,
+    note_1,
+    totalNotes: note_5 + note_2 + note_1,
   };
 }

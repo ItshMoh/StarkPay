@@ -35,6 +35,19 @@ app.post("/payroll/csv", (req, res) => {
   res.status(statusCode).json(result);
 });
 
+app.get("/receipts/wallet/:walletAddress", (req, res) => {
+  const includeDecrypted = req.query.include_decrypted === "true";
+  const decryptionContext = req.header("x-decryption-context") ?? undefined;
+
+  const receipts = payrollService.getReceiptsByWallet(
+    req.params.walletAddress,
+    includeDecrypted,
+    decryptionContext,
+  );
+
+  res.json({ receipts });
+});
+
 app.get("/receipts/:receiptId", (req, res) => {
   const includeDecrypted = req.query.include_decrypted === "true";
   const decryptionContext = req.header("x-decryption-context") ?? undefined;

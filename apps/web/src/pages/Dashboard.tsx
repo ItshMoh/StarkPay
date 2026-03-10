@@ -1,8 +1,13 @@
-import React from 'react';
+import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Wallet, Shield, ArrowUpRight, History, RefreshCw, LogOut, Calendar, ChevronRight } from 'lucide-react';
+import { Wallet, Shield, ArrowUpRight, History, RefreshCw, LogOut, ChevronRight } from 'lucide-react';
+import { useAccount, useDisconnect, useNetwork } from '@starknet-react/core';
+import { sepolia } from '@starknet-react/chains';
+import { formatIsoDate, shortAddress, toAmountString } from '../lib/format';
+import { loadPayrollHistory } from '../lib/payrollHistory';
+import { STARKSCAN_SEPOLIA_TX_BASE } from '../lib/config';
 
-function SummaryCard({ title, value, subtitle, icon }: { title: string, value: string, subtitle: string, icon: React.ReactNode }) {
+function SummaryCard({ title, value, subtitle, icon }: { title: string; value: string; subtitle: string; icon: React.ReactNode }) {
   return (
     <div className="bg-white dark:bg-[#0a0a0a] border border-neutral-200 dark:border-neutral-800 p-6 flex flex-col relative overflow-hidden group">
       <div className="absolute top-0 right-0 p-6 opacity-10 group-hover:opacity-20 transition-opacity">
@@ -15,47 +20,39 @@ function SummaryCard({ title, value, subtitle, icon }: { title: string, value: s
   );
 }
 
-function TransactionRow({ type, amount, date, status }: { type: string, amount: string, date: string, status: 'success' | 'pending' }) {
-  return (
-    <div className="grid grid-cols-12 gap-4 text-sm items-center py-4 border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-[#111111] transition-colors px-4 -mx-4">
-      <div className="col-span-4 flex items-center gap-3">
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center ${type === 'Send' ? 'bg-orange-50 dark:bg-orange-900/20 text-[#F28C38]' : 'bg-neutral-100 dark:bg-neutral-800 text-neutral-500'}`}>
-          {type === 'Send' ? <ArrowUpRight size={14} /> : <History size={14} />}
-        </div>
-        <span className="font-medium">{type}</span>
-      </div>
-      <div className="col-span-3 font-mono text-xs">{amount}</div>
-      <div className="col-span-3 text-neutral-500 text-xs">{date}</div>
-      <div className="col-span-2 text-right">
-        <span className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-sm ${status === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400'}`}>
-          {status}
-        </span>
-      </div>
-    </div>
-  );
-}
-
 export default function Dashboard() {
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+  const { chain } = useNetwork();
+  const [refreshTick, setRefreshTick] = useState(0);
+
+  const history = useMemo(() => loadPayrollHistory(), [refreshTick]);
+
+  const successful = history.filter((entry) => entry.status === 'success');
+  const totalSentUnits = successful.reduce((sum, entry) => sum + entry.totalAmountUnits, 0);
+  const lastSuccess = successful[0];
+  const recent = history.slice(0, 5);
+  const isOnSepolia = chain.id === sepolia.id;
+
   return (
     <div className="flex-1 flex flex-col bg-white dark:bg-[#0a0a0a] relative">
-      {/* Middle Line Nodes (if needed, but usually on the border) */}
-      
       <div className="px-8 lg:px-16 xl:px-24 py-12 max-w-7xl mx-auto w-full">
-        {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
           <div>
             <div className="flex items-center text-[10px] font-semibold tracking-[0.15em] mb-4 border border-neutral-200 dark:border-neutral-800 w-fit">
-              <span className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">0x049d...3e2f</span>
-              <span className="px-3 py-1.5 text-[#F28C38]">CONNECTED</span>
+              <span className="px-3 py-1.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-300">{shortAddress(address)}</span>
+              <span className={`px-3 py-1.5 ${isConnected && isOnSepolia ? 'text-[#F28C38]' : 'text-red-500'}`}>
+                {isConnected && isOnSepolia ? 'CONNECTED' : 'CHECK NETWORK'}
+              </span>
             </div>
             <h1 className="text-4xl font-medium tracking-tight">Dashboard Overview</h1>
           </div>
-          
+
           <div className="flex items-center gap-3">
-            <button className="p-3 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors text-neutral-500" title="Refresh Data">
+            <button onClick={() => setRefreshTick((value) => value + 1)} className="p-3 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors text-neutral-500" title="Refresh Data">
               <RefreshCw size={16} />
             </button>
-            <button className="p-3 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors text-neutral-500" title="Disconnect Wallet">
+            <button onClick={() => disconnect()} className="p-3 border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors text-neutral-500" title="Disconnect Wallet">
               <LogOut size={16} />
             </button>
             <Link to="/send" className="px-6 py-3 bg-[#F28C38] hover:bg-[#e07b27] text-white font-semibold transition-colors tracking-[0.15em] text-[11px] uppercase flex items-center gap-2">
@@ -64,45 +61,33 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Date Filter */}
-        <div className="flex items-center gap-4 mb-8 p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/50 dark:bg-[#111111]/50 w-fit">
-          <Calendar size={16} className="text-neutral-400" />
-          <div className="flex items-center gap-2">
-            <input type="date" className="bg-transparent text-xs font-medium outline-none text-neutral-600 dark:text-neutral-300" defaultValue="2023-10-01" />
-            <span className="text-neutral-400 text-xs">to</span>
-            <input type="date" className="bg-transparent text-xs font-medium outline-none text-neutral-600 dark:text-neutral-300" defaultValue="2023-10-31" />
-          </div>
-        </div>
-
-        {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-          <SummaryCard 
-            title="Available Token Balance" 
-            value="12.45 BTC" 
-            subtitle="Starknet Sepolia" 
-            icon={<Wallet size={48} />} 
+          <SummaryCard
+            title="Available Token Balance"
+            value="N/A"
+            subtitle="Connect token read in phase 7"
+            icon={<Wallet size={48} />}
           />
-          <SummaryCard 
-            title="Shielded Pool Balance" 
-            value="4.20 BTC" 
-            subtitle="Private Funds" 
-            icon={<Shield size={48} />} 
+          <SummaryCard
+            title="Shielded Pool Balance"
+            value="N/A"
+            subtitle="Read pending integration"
+            icon={<Shield size={48} />}
           />
-          <SummaryCard 
-            title="Total Sent (Period)" 
-            value="8.50 BTC" 
-            subtitle="Oct 1 - Oct 31" 
-            icon={<ArrowUpRight size={48} />} 
+          <SummaryCard
+            title="Total Sent (Period)"
+            value={`${toAmountString(totalSentUnits)} BTC`}
+            subtitle="From local payroll history"
+            icon={<ArrowUpRight size={48} />}
           />
-          <SummaryCard 
-            title="Payroll Batches" 
-            value="3" 
-            subtitle="Last successful: 2 days ago" 
-            icon={<History size={48} />} 
+          <SummaryCard
+            title="Payroll Batches"
+            value={String(successful.length)}
+            subtitle={lastSuccess ? `Last successful: ${formatIsoDate(lastSuccess.createdAt)}` : 'No successful batches yet'}
+            icon={<History size={48} />}
           />
         </div>
 
-        {/* Recent Activity */}
         <div>
           <div className="flex items-center justify-between mb-6 border-b border-neutral-200 dark:border-neutral-800 pb-4">
             <h2 className="text-lg font-medium">Recent Activity</h2>
@@ -110,20 +95,42 @@ export default function Dashboard() {
               View Full History <ChevronRight size={14} />
             </Link>
           </div>
-          
+
           <div className="grid grid-cols-12 gap-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 tracking-widest uppercase mb-2 px-4">
-            <div className="col-span-4">Type</div>
-            <div className="col-span-3">Amount</div>
             <div className="col-span-3">Date</div>
-            <div className="col-span-2 text-right">Status</div>
+            <div className="col-span-2">Type</div>
+            <div className="col-span-2">Amount</div>
+            <div className="col-span-2">Recipients</div>
+            <div className="col-span-1">Status</div>
+            <div className="col-span-2 text-right">Tx</div>
           </div>
-          
+
           <div className="flex flex-col">
-            <TransactionRow type="Send" amount="4.25 BTC" date="Oct 28, 2023 14:30" status="success" />
-            <TransactionRow type="Send" amount="1.10 BTC" date="Oct 15, 2023 09:15" status="success" />
-            <TransactionRow type="Withdraw" amount="0.50 BTC" date="Oct 10, 2023 11:45" status="success" />
-            <TransactionRow type="Send" amount="3.15 BTC" date="Oct 01, 2023 16:20" status="success" />
-            <TransactionRow type="Send" amount="0.80 BTC" date="Sep 28, 2023 10:05" status="pending" />
+            {recent.length === 0 && (
+              <div className="text-sm text-neutral-500 py-6 px-4">No payroll activity yet.</div>
+            )}
+            {recent.map((entry) => (
+              <div key={entry.id} className="grid grid-cols-12 gap-4 text-sm items-center py-4 border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-[#111111] transition-colors px-4 -mx-4">
+                <div className="col-span-3 text-xs text-neutral-500">{formatIsoDate(entry.createdAt)}</div>
+                <div className="col-span-2 font-medium">Send</div>
+                <div className="col-span-2 font-mono text-xs">{entry.totalAmount} BTC</div>
+                <div className="col-span-2 text-xs text-neutral-500">{entry.recipientCount}</div>
+                <div className="col-span-1">
+                  <span className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-sm ${entry.status === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : entry.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'}`}>
+                    {entry.status}
+                  </span>
+                </div>
+                <div className="col-span-2 text-right">
+                  {entry.executeTxHash ? (
+                    <a href={`${STARKSCAN_SEPOLIA_TX_BASE}${entry.executeTxHash}`} target="_blank" rel="noreferrer" className="text-[#F28C38] hover:underline text-xs font-mono">
+                      {shortAddress(entry.executeTxHash, 8, 6)}
+                    </a>
+                  ) : (
+                    <span className="text-xs text-neutral-400">-</span>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </div>

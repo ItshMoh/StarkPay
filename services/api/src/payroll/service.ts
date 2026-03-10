@@ -63,7 +63,7 @@ export class PayrollService {
       };
 
       const encryptedBlob = encryptMetadata(metadata, this.encryptionKey);
-      const stored = this.store.create(encryptedBlob);
+      const stored = this.store.create(encryptedBlob, row.walletAddress);
 
       return {
         receiptId: stored.receiptId,
@@ -87,6 +87,35 @@ export class PayrollService {
       receipts,
       invalidRows: parsed.invalidRows,
     };
+  }
+
+  getReceiptsByWallet(
+    walletAddress: string,
+    includeDecrypted: boolean,
+    providedDecryptionContext?: string,
+  ): GetReceiptResult[] {
+    const stored = this.store.getByWallet(walletAddress);
+
+    const hasValidContext =
+      includeDecrypted &&
+      typeof providedDecryptionContext === "string" &&
+      providedDecryptionContext === this.decryptionContext;
+
+    return stored.map((record) => {
+      const base: GetReceiptResult = {
+        receiptId: record.receiptId,
+        createdAt: record.createdAt,
+        encryptedBlob: record.encryptedBlob,
+        decryptionAllowed: hasValidContext,
+      };
+
+      if (!hasValidContext) return base;
+
+      return {
+        ...base,
+        decryptedMetadata: decryptMetadata(record.encryptedBlob, this.encryptionKey),
+      };
+    });
   }
 
   getReceipt(

@@ -4,6 +4,7 @@ import Home from './pages/Home';
 import Dashboard from './pages/Dashboard';
 import Send from './pages/Send';
 import History from './pages/History';
+import Employee from './pages/Employee';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="send" element={<Send />} />
           <Route path="history" element={<History />} />
+          <Route path="employee" element={<Employee />} />
         </Route>
       </Routes>
     </BrowserRouter>

@@ -1,11 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { flushSync } from 'react-dom';
+import { useEffect, useState } from 'react';
 import { Moon, Sun } from 'lucide-react';
-import { Outlet, Link, useLocation } from 'react-router-dom';
+import {
+  useAccount,
+  useConnect,
+  useDisconnect,
+  useNetwork,
+} from '@starknet-react/core';
+import { sepolia } from '@starknet-react/chains';
+import { Link, Outlet, useLocation } from 'react-router-dom';
+import { shortAddress } from '../lib/format';
 
 export default function Layout() {
   const [isDark, setIsDark] = useState(false);
   const location = useLocation();
+  const { connect, connectors, isPending } = useConnect();
+  const { disconnect } = useDisconnect();
+  const { address, isConnected } = useAccount();
+  const { chain } = useNetwork();
+  const preferredConnector = connectors.find((connector) => connector.id === 'braavos' && connector.available())
+    ?? connectors.find((connector) => connector.id === 'argentX' && connector.available())
+    ?? connectors.find((connector) => connector.available())
+    ?? connectors[0];
+
+  const isOnSepolia = chain.id === sepolia.id;
 
   useEffect(() => {
     if (isDark) {
@@ -15,90 +32,52 @@ export default function Layout() {
     }
   }, [isDark]);
 
-  const toggleTheme = (e: React.MouseEvent) => {
-    const doc = document as any;
-    if (!doc.startViewTransition) {
-      setIsDark(!isDark);
-      return;
-    }
-
-    const x = e.clientX;
-    const y = e.clientY;
-    const endRadius = Math.hypot(
-      Math.max(x, window.innerWidth - x),
-      Math.max(y, window.innerHeight - y)
-    );
-
-    const transition = doc.startViewTransition(() => {
-      flushSync(() => {
-        setIsDark(!isDark);
-      });
-    });
-
-    transition.ready.then(() => {
-      const clipPath = [
-        `circle(0px at ${x}px ${y}px)`,
-        `circle(${endRadius}px at ${x}px ${y}px)`,
-      ];
-      document.documentElement.animate(
-        {
-          clipPath: isDark ? [...clipPath].reverse() : clipPath,
-        },
-        {
-          duration: 600,
-          easing: 'ease-in-out',
-          pseudoElement: isDark
-            ? '::view-transition-old(root)'
-            : '::view-transition-new(root)',
-        }
-      );
-    });
-  };
+  function connectWallet() {
+    if (!preferredConnector) return;
+    connect({ connector: preferredConnector });
+  }
 
   return (
     <div className="min-h-screen bg-[#f3f4f6] dark:bg-[#000000] flex justify-center transition-colors duration-0">
       <div className="w-full max-w-[1536px] min-h-screen bg-white dark:bg-[#0a0a0a] text-neutral-900 dark:text-white transition-colors duration-0 font-sans flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.08)] dark:shadow-[0_0_100px_rgba(255,255,255,0.03)] border-x border-neutral-200 dark:border-neutral-800">
-      
-      {/* Header */}
-      <header className="relative z-20 flex items-center justify-between px-8 py-6 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#0a0a0a]">
-        {/* Decorative Nodes */}
-        <div className="absolute top-[-1px] -left-[3px] w-[5px] h-[5px] border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#0a0a0a] z-30"></div>
-        <div className="absolute top-[-1px] -right-[3px] w-[5px] h-[5px] border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#0a0a0a] z-30"></div>
-        <div className="absolute -bottom-[3px] -left-[3px] w-[5px] h-[5px] border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#0a0a0a] z-30"></div>
-        <div className="absolute -bottom-[3px] -right-[3px] w-[5px] h-[5px] border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#0a0a0a] z-30"></div>
+        <header className="relative z-20 flex items-center justify-between px-8 py-6 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#0a0a0a]">
+          <Link to="/" className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full border-[3px] border-[#F28C38] border-t-transparent rotate-45"></div>
+            <span className="text-xl font-semibold tracking-tight">StarkPay</span>
+          </Link>
 
-        <Link to="/" className="flex items-center gap-3">
-          <div className="w-6 h-6 rounded-full border-[3px] border-[#F28C38] border-t-transparent rotate-45"></div>
-          <span className="text-xl font-semibold tracking-tight">StarkPay</span>
-        </Link>
-        
-        <nav className="hidden md:flex items-center gap-10 text-[11px] font-medium tracking-[0.15em] text-neutral-500 dark:text-neutral-400 uppercase">
-          <Link to="/" className={`transition-colors ${location.pathname === '/' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>Home</Link>
-          <Link to="/dashboard" className={`transition-colors ${location.pathname === '/dashboard' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>Dashboard</Link>
-          <Link to="/send" className={`transition-colors ${location.pathname === '/send' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>Send</Link>
-          <Link to="/history" className={`transition-colors ${location.pathname === '/history' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>History</Link>
-        </nav>
+          <nav className="hidden md:flex items-center gap-10 text-[11px] font-medium tracking-[0.15em] text-neutral-500 dark:text-neutral-400 uppercase">
+            <Link to="/" className={`transition-colors ${location.pathname === '/' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>Home</Link>
+            <Link to="/dashboard" className={`transition-colors ${location.pathname === '/dashboard' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>Dashboard</Link>
+            <Link to="/send" className={`transition-colors ${location.pathname === '/send' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>Send</Link>
+            <Link to="/history" className={`transition-colors ${location.pathname === '/history' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>History</Link>
+            <Link to="/employee" className={`transition-colors ${location.pathname === '/employee' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>Employee</Link>
+          </nav>
 
-        <div className="flex items-center gap-8">
-          <button onClick={toggleTheme} className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
-            {isDark ? <Sun size={18} /> : <Moon size={18} />}
-          </button>
-          <button className="px-8 py-3 text-[11px] font-medium tracking-[0.2em] uppercase border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors">
-            Connect Wallet
-          </button>
-        </div>
-      </header>
+          <div className="flex items-center gap-3">
+            <button onClick={() => setIsDark((value) => !value)} className="p-2 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors">
+              {isDark ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+            {isConnected ? (
+              <button onClick={() => disconnect()} className="px-4 py-2 text-[11px] font-medium tracking-[0.15em] uppercase border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors">
+                {shortAddress(address)}
+              </button>
+            ) : (
+              <button onClick={connectWallet} disabled={isPending || !preferredConnector} className="px-4 py-2 text-[11px] font-medium tracking-[0.15em] uppercase border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                {isPending ? 'Connecting...' : 'Connect Wallet'}
+              </button>
+            )}
+            {isConnected && !isOnSepolia && (
+              <span className="text-[10px] tracking-[0.12em] uppercase text-red-500">Wrong network</span>
+            )}
+          </div>
+        </header>
 
-      {/* Pattern Strip */}
-      <div className="h-8 border-b border-neutral-200 dark:border-neutral-800 bg-pattern w-full relative z-10">
-        <div className="absolute -bottom-[3px] -left-[3px] w-[5px] h-[5px] border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#0a0a0a] z-30"></div>
-        <div className="absolute -bottom-[3px] -right-[3px] w-[5px] h-[5px] border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#0a0a0a] z-30"></div>
-      </div>
+        <div className="h-8 border-b border-neutral-200 dark:border-neutral-800 bg-pattern w-full relative z-10"></div>
 
-      {/* Main Content */}
-      <main className="relative z-10 flex flex-col lg:flex-row flex-1">
-        <Outlet />
-      </main>
+        <main className="relative z-10 flex flex-col lg:flex-row flex-1">
+          <Outlet />
+        </main>
       </div>
     </div>
   );
