@@ -78,3 +78,9 @@ export type GetReceiptResult = {
   decryptedMetadata?: PayrollReceiptMetadata;
   decryptionAllowed: boolean;
 };
+
+export interface IReceiptStore {
+  create(encryptedBlob: EncryptedBlob, walletAddress: string): Promise<StoredReceipt>;
+  get(receiptId: string): Promise<StoredReceipt | undefined>;
+  getByWallet(walletAddress: string): Promise<StoredReceipt[]>;
+}

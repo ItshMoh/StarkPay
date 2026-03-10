@@ -4,6 +4,7 @@ import { decryptMetadata, encryptMetadata, buildEncryptionKey } from "./crypto.j
 import { formatUnits, parseAmountToUnits, toDenominationBundle } from "./denominations.js";
 import { parsePayrollCsv } from "./csv.js";
 import { PayrollService } from "./service.js";
+import { MemoryReceiptStore } from "./store.js";
 
 test("CSV parser validates header and malformed rows", () => {
   const invalidHeader = parsePayrollCsv("wallet,amount,employee\n0x1,0.000010,Alice");
@@ -62,13 +63,14 @@ test("Encryption and decryption roundtrip works", () => {
   assert.deepEqual(decrypted, payload);
 });
 
-test("Receipt API behavior only decrypts with valid context", () => {
+test("Receipt API behavior only decrypts with valid context", async () => {
+  const store = new MemoryReceiptStore();
   const service = new PayrollService({
     encryptionSecret: "phase5-test-secret",
     decryptionContext: "phase5-test-context",
-  });
+  }, store);
 
-  const ingest = service.ingestCsv(
+  const ingest = await service.ingestCsv(
     "wallet_address,amount,employee_name\n0x1234,0.000005,Alice",
   );
 
@@ -77,27 +79,28 @@ test("Receipt API behavior only decrypts with valid context", () => {
 
   const receiptId = ingest.receipts[0].receiptId;
 
-  const encryptedOnly = service.getReceipt(receiptId, false);
+  const encryptedOnly = await service.getReceipt(receiptId, false);
   assert(encryptedOnly);
   assert.equal(encryptedOnly.decryptionAllowed, false);
   assert.equal(encryptedOnly.decryptedMetadata, undefined);
 
-  const wrongContext = service.getReceipt(receiptId, true, "wrong-context");
+  const wrongContext = await service.getReceipt(receiptId, true, "wrong-context");
   assert(wrongContext);
   assert.equal(wrongContext.decryptionAllowed, false);
   assert.equal(wrongContext.decryptedMetadata, undefined);
 
-  const withContext = service.getReceipt(receiptId, true, "phase5-test-context");
+  const withContext = await service.getReceipt(receiptId, true, "phase5-test-context");
   assert(withContext);
   assert.equal(withContext.decryptionAllowed, true);
   assert.equal(withContext.decryptedMetadata?.employeeName, "Alice");
 });
 
-test("Wallet-based receipt lookup returns correct receipts", () => {
+test("Wallet-based receipt lookup returns correct receipts", async () => {
+  const store = new MemoryReceiptStore();
   const service = new PayrollService({
     encryptionSecret: "phase5-test-secret",
     decryptionContext: "phase5-test-context",
-  });
+  }, store);
 
   const csv = [
     "wallet_address,amount,employee_name",
@@ -106,23 +109,23 @@ test("Wallet-based receipt lookup returns correct receipts", () => {
     "0x1234,0.000002,Alice",
   ].join("\n");
 
-  const ingest = service.ingestCsv(csv);
+  const ingest = await service.ingestCsv(csv);
   assert.equal(ingest.validCount, 3);
 
   // Alice (0x1234) should have 2 receipts
-  const aliceReceipts = service.getReceiptsByWallet("0x1234", false);
+  const aliceReceipts = await service.getReceiptsByWallet("0x1234", false);
   assert.equal(aliceReceipts.length, 2);
 
   // Bob (0x5678) should have 1 receipt
-  const bobReceipts = service.getReceiptsByWallet("0x5678", false);
+  const bobReceipts = await service.getReceiptsByWallet("0x5678", false);
   assert.equal(bobReceipts.length, 1);
 
   // Unknown wallet should have 0
-  const unknownReceipts = service.getReceiptsByWallet("0x9999", false);
+  const unknownReceipts = await service.getReceiptsByWallet("0x9999", false);
   assert.equal(unknownReceipts.length, 0);
 
   // With decryption context, should include metadata
-  const aliceDecrypted = service.getReceiptsByWallet(
+  const aliceDecrypted = await service.getReceiptsByWallet(
     "0x1234",
     true,
     "phase5-test-context",
@@ -132,7 +135,7 @@ test("Wallet-based receipt lookup returns correct receipts", () => {
   assert.equal(aliceDecrypted[0].decryptedMetadata?.employeeName, "Alice");
 
   // With wrong context, should not decrypt
-  const aliceWrongCtx = service.getReceiptsByWallet(
+  const aliceWrongCtx = await service.getReceiptsByWallet(
     "0x1234",
     true,
     "wrong-context",

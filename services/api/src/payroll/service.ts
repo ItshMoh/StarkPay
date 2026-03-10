@@ -2,9 +2,10 @@ import { randomUUID } from "node:crypto";
 import { formatUnits } from "./denominations.js";
 import { parsePayrollCsv } from "./csv.js";
 import { buildEncryptionKey, decryptMetadata, encryptMetadata } from "./crypto.js";
-import { EncryptedReceiptStore } from "./store.js";
+import { MemoryReceiptStore } from "./store.js";
 import type {
   GetReceiptResult,
+  IReceiptStore,
   IngestCsvResult,
   PayrollReceiptMetadata,
 } from "./types.js";
@@ -24,9 +25,9 @@ export class PayrollService {
 
   private readonly decryptionContext: string;
 
-  private readonly store: EncryptedReceiptStore;
+  private readonly store: IReceiptStore;
 
-  constructor(config?: Partial<PayrollServiceConfig>, store?: EncryptedReceiptStore) {
+  constructor(config?: Partial<PayrollServiceConfig>, store?: IReceiptStore) {
     const resolvedEncryptionSecret =
       typeof config?.encryptionSecret === "string" && config.encryptionSecret.trim().length > 0
         ? config.encryptionSecret
@@ -38,17 +39,18 @@ export class PayrollService {
 
     this.encryptionKey = buildEncryptionKey(resolvedEncryptionSecret);
     this.decryptionContext = resolvedDecryptionContext;
-    this.store = store ?? new EncryptedReceiptStore();
+    this.store = store ?? new MemoryReceiptStore();
   }
 
-  ingestCsv(csvText: string): IngestCsvResult {
+  async ingestCsv(csvText: string): Promise<IngestCsvResult> {
     const parsed = parsePayrollCsv(csvText);
     const batchId = randomUUID();
 
     let totalAmountUnits = 0;
     let totalNotes = 0;
 
-    const receipts = parsed.validRows.map((row) => {
+    const receipts = [];
+    for (const row of parsed.validRows) {
       totalAmountUnits += row.amountUnits;
       totalNotes += row.denominationBundle.totalNotes;
 
@@ -63,9 +65,9 @@ export class PayrollService {
       };
 
       const encryptedBlob = encryptMetadata(metadata, this.encryptionKey);
-      const stored = this.store.create(encryptedBlob, row.walletAddress);
+      const stored = await this.store.create(encryptedBlob, row.walletAddress);
 
-      return {
+      receipts.push({
         receiptId: stored.receiptId,
         createdAt: stored.createdAt,
         encryptedBlob: stored.encryptedBlob,
@@ -74,8 +76,8 @@ export class PayrollService {
         amount: row.amount,
         employeeName: row.employeeName,
         denominationBundle: row.denominationBundle,
-      };
-    });
+      });
+    }
 
     return {
       batchId,
@@ -89,12 +91,12 @@ export class PayrollService {
     };
   }
 
-  getReceiptsByWallet(
+  async getReceiptsByWallet(
     walletAddress: string,
     includeDecrypted: boolean,
     providedDecryptionContext?: string,
-  ): GetReceiptResult[] {
-    const stored = this.store.getByWallet(walletAddress);
+  ): Promise<GetReceiptResult[]> {
+    const stored = await this.store.getByWallet(walletAddress);
 
     const hasValidContext =
       includeDecrypted &&
@@ -118,12 +120,12 @@ export class PayrollService {
     });
   }
 
-  getReceipt(
+  async getReceipt(
     receiptId: string,
     includeDecrypted: boolean,
     providedDecryptionContext?: string,
-  ): GetReceiptResult | null {
-    const stored = this.store.get(receiptId);
+  ): Promise<GetReceiptResult | null> {
+    const stored = await this.store.get(receiptId);
     if (!stored) {
       return null;
     }
