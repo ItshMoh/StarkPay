@@ -109,14 +109,6 @@ function extractCsvBodyRows(csvText: string): string[] {
   return lines;
 }
 
-function normalizeHex(value: string): string {
-  try {
-    return `0x${BigInt(value).toString(16)}`;
-  } catch {
-    return value.toLowerCase();
-  }
-}
-
 function randomFelt(): string {
   const bytes = new Uint8Array(31);
   crypto.getRandomValues(bytes);
@@ -128,31 +120,6 @@ function isReceiptSuccessful(receipt: unknown): boolean {
   const receiptLike = receipt as { execution_status?: string; value?: { execution_status?: string } };
   const executionStatus = receiptLike.execution_status ?? receiptLike.value?.execution_status;
   return executionStatus !== 'REVERTED';
-}
-
-function extractBatchId(receipt: unknown, dispatcherAddress: string): string | null {
-  if (!receipt || typeof receipt !== 'object') return null;
-
-  const receiptLike = receipt as {
-    events?: Array<{ from_address?: string; keys?: string[]; data?: string[] }>;
-    value?: {
-      events?: Array<{ from_address?: string; keys?: string[]; data?: string[] }>;
-    };
-  };
-
-  const selector = normalizeHex(hash.getSelectorFromName('BatchQueued'));
-  const dispatcher = normalizeHex(dispatcherAddress);
-  const events = receiptLike.events ?? receiptLike.value?.events ?? [];
-
-  for (const event of events) {
-    const eventFrom = normalizeHex(event.from_address ?? '');
-    const firstKey = normalizeHex(event.keys?.[0] ?? '');
-    if (eventFrom === dispatcher && firstKey === selector && event.data?.[0]) {
-      return event.data[0];
-    }
-  }
-
-  return null;
 }
 
 export default function Send() {
