@@ -75,11 +75,6 @@ export default function Home() {
         <div className="absolute top-[-3px] -right-[3px] w-[5px] h-[5px] border border-neutral-300 dark:border-neutral-600 bg-white dark:bg-[#0a0a0a] z-30 hidden lg:block"></div>
 
         <div className="max-w-xl">
-          <div className="flex items-center text-[10px] font-semibold tracking-[0.15em] mb-8 border border-neutral-200 dark:border-neutral-800 w-fit">
-            <span className="px-3 py-1.5 bg-[#F28C38] text-white">PHASE 6</span>
-            <span className="px-3 py-1.5 text-neutral-600 dark:text-neutral-300">EMPLOYER FRONTEND</span>
-          </div>
-
           <h1 className="text-6xl lg:text-[72px] font-medium tracking-[-0.03em] leading-[1.05] mb-6">
             On-Chain Payroll
             <br />
