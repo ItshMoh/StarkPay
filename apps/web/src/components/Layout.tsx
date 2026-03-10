@@ -11,7 +11,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { shortAddress } from '../lib/format';
 
 export default function Layout() {
-  const [isDark, setIsDark] = useState(false);
+  const [isDark, setIsDark] = useState(true);
   const location = useLocation();
   const { connect, connectors, isPending } = useConnect();
   const { disconnect } = useDisconnect();
