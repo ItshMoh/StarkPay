@@ -173,7 +173,6 @@ export default function Employee() {
             latestRoot,
             nullifier,
             amountHex,
-            '0x0', // u128 high
             proofHash,
             publicInputsHash,
           ],
