@@ -1,0 +1,6 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer arc ring -->
+  <circle cx="64" cy="64" r="52" stroke="#F28C38" stroke-width="8" stroke-linecap="round" stroke-dasharray="260 80" transform="rotate(-45 64 64)"/>
+  <!-- Inner dot -->
+  <circle cx="64" cy="64" r="12" fill="#F28C38"/>
+</svg>
