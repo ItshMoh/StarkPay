@@ -65,19 +65,19 @@ export default function Dashboard() {
           <SummaryCard
             title="Available Token Balance"
             value="N/A"
-            subtitle="Connect token read in phase 7"
+            subtitle=""
             icon={<Wallet size={48} />}
           />
           <SummaryCard
             title="Shielded Pool Balance"
             value="N/A"
-            subtitle="Read pending integration"
+            subtitle=""
             icon={<Shield size={48} />}
           />
           <SummaryCard
             title="Total Sent (Period)"
             value={`${toAmountString(totalSentUnits)} BTC`}
-            subtitle="From local payroll history"
+            subtitle=""
             icon={<ArrowUpRight size={48} />}
           />
           <SummaryCard
