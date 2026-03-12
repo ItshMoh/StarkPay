@@ -100,11 +100,7 @@ snforge test
 ## Network Configuration
 
 - Network: Starknet Sepolia testnet
-- Asset: BTC test token on Starknet Sepolia
-
-## Current Status
-
-Phases 1 through 8 are complete. The project is in Phase 9: end-to-end hardening and demo readiness.
+- Asset: spBTC -- our custom ERC20 token deployed on Starknet Sepolia, used as the payroll denomination across all employer deposits and employee withdrawals
 
 ## Scope Limitations
 
