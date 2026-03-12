@@ -4,6 +4,16 @@ StarkPay is a privacy-focused payroll system built on Starknet Sepolia (testnet)
 
 On-chain payroll today has a fundamental problem: every payment is publicly visible. Anyone with a block explorer can see who paid whom and how much. StarkPay fixes this by routing payments through a ZK shielded pool that breaks the on-chain link between employer and employee.
 
+## Quick Start -- Try It Out
+
+1. Install a Starknet wallet (Braavos or ArgentX) and switch to **Sepolia testnet**.
+2. Open the app and connect your wallet.
+3. Go to the **Mint** page and mint some spBTC tokens to your wallet. These are free testnet tokens with no real value.
+4. Go to **Send**, upload a CSV file with columns `wallet_address,amount,employee_name`, and execute the payroll batch.
+5. Switch to the **Employee** page with a recipient wallet to view encrypted receipts and withdraw funds.
+
+> **Note:** spBTC is our custom ERC20 token deployed on Starknet Sepolia. You need spBTC tokens in your wallet before you can run payroll. Use the in-app Mint page to get tokens instantly -- no external faucet needed.
+
 ## How It Works
 
 1. **Upload CSV** -- Employer uploads a payroll file (wallet address, amount, employee name). The system validates entries and converts amounts into fixed-denomination note bundles.
