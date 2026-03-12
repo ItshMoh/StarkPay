@@ -42,7 +42,7 @@ export default function Layout() {
       <div className="w-full max-w-[1536px] min-h-screen bg-white dark:bg-[#0a0a0a] text-neutral-900 dark:text-white transition-colors duration-0 font-sans flex flex-col relative shadow-[0_0_100px_rgba(0,0,0,0.08)] dark:shadow-[0_0_100px_rgba(255,255,255,0.03)] border-x border-neutral-200 dark:border-neutral-800">
         <header className="relative z-20 flex items-center justify-between px-8 py-6 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-[#0a0a0a]">
           <Link to="/" className="flex items-center gap-3">
-            <div className="w-6 h-6 rounded-full border-[3px] border-[#F28C38] border-t-transparent rotate-45"></div>
+            <img src="/logo.png" alt="StarkPay" className="w-6 h-6 rounded-full object-cover" />
             <span className="text-xl font-semibold tracking-tight">StarkPay</span>
           </Link>
 
@@ -75,7 +75,7 @@ export default function Layout() {
 
         <div className="h-8 border-b border-neutral-200 dark:border-neutral-800 bg-pattern w-full relative z-10"></div>
 
-        <main className="relative z-10 flex flex-col lg:flex-row flex-1">
+        <main className={`relative z-10 flex flex-1 ${location.pathname === '/' ? 'flex-col' : 'flex-col lg:flex-row'}`}>
           <Outlet />
         </main>
       </div>

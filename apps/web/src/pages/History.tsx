@@ -4,7 +4,7 @@ import { Search, Filter, Download, ArrowUpRight, ChevronLeft, Shield, Lock, Exte
 import { formatIsoDate, shortAddress } from '../lib/format';
 import { loadPayrollHistory } from '../lib/payrollHistory';
 import type { PayrollHistoryEntry, PayrollTxStatus } from '../lib/payrollHistory';
-import { STARKSCAN_SEPOLIA_TX_BASE } from '../lib/config';
+const VOYAGER_SEPOLIA_TX_BASE = 'https://sepolia.voyager.online/tx/';
 
 function rowMatchesFilters(
   row: PayrollHistoryEntry,
@@ -151,13 +151,17 @@ export default function History() {
               </button>
             </div>
 
-            <div className="grid grid-cols-12 gap-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 tracking-widest uppercase mb-2 border-b border-neutral-200 dark:border-neutral-800 pb-3 px-4">
-              <div className="col-span-3">Date/Time</div>
+            <div className="grid grid-cols-16 gap-4 text-[10px] font-bold text-neutral-400 dark:text-neutral-500 tracking-widest uppercase mb-2 border-b border-neutral-200 dark:border-neutral-800 pb-3 px-4" style={{ gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}>
+              <div className="col-span-4">Date/Time</div>
               <div className="col-span-2">Type</div>
-              <div className="col-span-2">Amount</div>
-              <div className="col-span-2">Recipients</div>
-              <div className="col-span-1">Status</div>
-              <div className="col-span-2 text-right">Tx Hash</div>
+              <div className="col-span-3">Amount</div>
+              <div className="col-span-1">
+                <div className="status -ml-4"> Recipients</div>
+                </div>
+              <div className="col-span-2 ">
+                <div className="status -mr-4"> Status</div>
+                </div>
+              <div className="col-span-4 text-right">Tx Hash</div>
             </div>
 
             <div className="flex-1 overflow-y-auto min-h-[400px]">
@@ -166,25 +170,25 @@ export default function History() {
               )}
 
               {filtered.map((row) => (
-                <button key={row.id} onClick={() => setSelectedTxId(row.id)} className="w-full text-left grid grid-cols-12 gap-4 text-sm items-center py-4 border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-[#111111] transition-colors px-4 -mx-4 cursor-pointer">
-                  <div className="col-span-3 text-neutral-500 text-xs">{formatIsoDate(row.createdAt)}</div>
+                <button key={row.id} onClick={() => setSelectedTxId(row.id)} className="w-full text-left grid gap-4 text-sm items-center py-4 border-b border-neutral-100 dark:border-neutral-800/50 last:border-0 hover:bg-neutral-50 dark:hover:bg-[#111111] transition-colors px-4 -mx-4 cursor-pointer" style={{ gridTemplateColumns: 'repeat(16, minmax(0, 1fr))' }}>
+                  <div className="col-span-4 text-neutral-500 text-xs">{formatIsoDate(row.createdAt)}</div>
                   <div className="col-span-2 flex items-center gap-2">
                     <div className="w-6 h-6 rounded-full flex items-center justify-center bg-orange-50 dark:bg-orange-900/20 text-[#F28C38]">
                       <ArrowUpRight size={12} />
                     </div>
                     <span className="font-medium text-xs">Send</span>
                   </div>
-                  <div className="col-span-2 font-mono text-xs">{row.totalAmount} BTC</div>
-                  <div className="col-span-2 text-xs text-neutral-500">{row.recipientCount}</div>
-                  <div className="col-span-1">
+                  <div className="col-span-3 font-mono text-xs">{row.totalAmount} BTC</div>
+                  <div className="col-span-1 text-xs text-neutral-500">{row.recipientCount}</div>
+                  <div className="col-span-2">
                     <span className={`text-[10px] font-bold tracking-widest uppercase px-2 py-1 rounded-sm ${row.status === 'success' ? 'bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400' : row.status === 'pending' ? 'bg-yellow-50 dark:bg-yellow-900/20 text-yellow-600 dark:text-yellow-400' : 'bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400'}`}>
                       {row.status}
                     </span>
                   </div>
-                  <div className="col-span-2 flex justify-end">
+                  <div className="col-span-4 flex justify-end">
                     {row.executeTxHash ? (
-                      <a href={`${STARKSCAN_SEPOLIA_TX_BASE}${row.executeTxHash}`} onClick={(event) => event.stopPropagation()} target="_blank" rel="noreferrer" className="text-[#F28C38] hover:text-[#e07b27] transition-colors flex items-center gap-1 text-xs font-medium">
-                        {shortAddress(row.executeTxHash, 10, 8)} <ExternalLink size={12} />
+                      <a href={`${VOYAGER_SEPOLIA_TX_BASE}${row.executeTxHash}`} onClick={(event) => event.stopPropagation()} target="_blank" rel="noreferrer" className="text-[#F28C38] hover:text-[#e07b27] transition-colors flex items-center gap-1 text-xs font-medium truncate max-w-full">
+                        {shortAddress(row.executeTxHash, 6, 6)} <ExternalLink size={12} className="shrink-0" />
                       </a>
                     ) : (
                       <span className="text-xs text-neutral-400">-</span>
@@ -269,7 +273,7 @@ export default function History() {
                   <div className="pt-2">
                     <span className="text-neutral-500 block mb-1">Execute Transaction Hash</span>
                     {selectedTx.executeTxHash ? (
-                      <a href={`${STARKSCAN_SEPOLIA_TX_BASE}${selectedTx.executeTxHash}`} target="_blank" rel="noreferrer" className="font-mono text-xs text-[#F28C38] hover:underline break-all">
+                      <a href={`${VOYAGER_SEPOLIA_TX_BASE}${selectedTx.executeTxHash}`} target="_blank" rel="noreferrer" className="font-mono text-xs text-[#F28C38] hover:underline break-all">
                         {selectedTx.executeTxHash}
                       </a>
                     ) : (

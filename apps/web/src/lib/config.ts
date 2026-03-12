@@ -13,4 +13,4 @@ export const TBTC_TOKEN_ADDRESS =
   import.meta.env.VITE_TBTC_TOKEN_ADDRESS ??
   '0x023fb056e4b756d0877b4cd09e8f8aff27f89b6844b7a75c73f91fa5b79f52a9';
 
-export const STARKSCAN_SEPOLIA_TX_BASE = 'https://sepolia.starkscan.co/tx/';
+export const STARKSCAN_SEPOLIA_TX_BASE = 'https://sepolia.voyager.online/tx/';
