@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, Coins, CheckCircle, AlertCircle, LoaderCircle, ExternalLink } from 'lucide-react';
+import { ChevronLeft, Coins, CheckCircle, AlertCircle, LoaderCircle, ExternalLink, Copy, Check } from 'lucide-react';
 import {
   useAccount,
   useNetwork,
@@ -23,6 +23,13 @@ export default function Mint() {
   const [status, setStatus] = useState<MintStatus>('idle');
   const [txHash, setTxHash] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  function copyTokenAddress() {
+    navigator.clipboard.writeText(TBTC_TOKEN_ADDRESS);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
 
   const presets = [
     { label: '1 spBTC', value: '1' },
@@ -91,6 +98,22 @@ export default function Mint() {
                 Token: {shortAddress(TBTC_TOKEN_ADDRESS, 10, 8)}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* Add token to wallet */}
+        <div className="border border-neutral-200 dark:border-neutral-800 p-5 mb-8 bg-neutral-50/40 dark:bg-[#111111]/50">
+          <h3 className="text-[11px] font-bold text-neutral-400 dark:text-neutral-500 tracking-widest uppercase mb-3">
+            Add spBTC to Your Wallet
+          </h3>
+          <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-3 leading-relaxed">
+            After minting, add the token address to your wallet to see your balance. In Braavos click "Add Token", in ArgentX go to Settings &gt; Manage Tokens &gt; Add Token.
+          </p>
+          <div className="flex items-center gap-2 bg-white dark:bg-[#141414] border border-neutral-200 dark:border-neutral-800 rounded-sm px-3 py-2">
+            <span className="text-xs font-mono text-neutral-600 dark:text-neutral-300 break-all flex-1 select-all">{TBTC_TOKEN_ADDRESS}</span>
+            <button onClick={copyTokenAddress} className="shrink-0 p-1.5 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors" title="Copy address">
+              {copied ? <Check size={14} className="text-green-500" /> : <Copy size={14} className="text-neutral-400" />}
+            </button>
           </div>
         </div>
 
