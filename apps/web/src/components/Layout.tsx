@@ -52,6 +52,7 @@ export default function Layout() {
             <Link to="/send" className={`transition-colors ${location.pathname === '/send' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>Send</Link>
             <Link to="/history" className={`transition-colors ${location.pathname === '/history' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>History</Link>
             <Link to="/employee" className={`transition-colors ${location.pathname === '/employee' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>Employee</Link>
+            <Link to="/mint" className={`transition-colors ${location.pathname === '/mint' ? 'text-neutral-900 dark:text-white' : 'hover:text-neutral-900 dark:hover:text-white'}`}>Mint</Link>
           </nav>
 
           <div className="flex items-center gap-3">

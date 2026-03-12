@@ -5,6 +5,7 @@ import Dashboard from './pages/Dashboard';
 import Send from './pages/Send';
 import History from './pages/History';
 import Employee from './pages/Employee';
+import Mint from './pages/Mint';
 
 function App() {
   return (
@@ -16,6 +17,7 @@ function App() {
           <Route path="send" element={<Send />} />
           <Route path="history" element={<History />} />
           <Route path="employee" element={<Employee />} />
+          <Route path="mint" element={<Mint />} />
         </Route>
       </Routes>
     </BrowserRouter>
