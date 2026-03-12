@@ -8,13 +8,14 @@ On-chain payroll today has a fundamental problem: every payment is publicly visi
 
 ## Quick Start -- Try It Out
 
-**Demo Video:** https://www.loom.com/share/c8490972153c42fc884bb154d3a8548d
+**Demo Video:** https://www.loom.com/share/5b41d3127b644c1ca193dd0d24474487
 
 1. Install a Starknet wallet (Braavos or ArgentX) and switch to **Sepolia testnet**.
 2. Open the app and connect your wallet.
 3. Go to the **Mint** page and mint some spBTC tokens to your wallet. These are free testnet tokens with no real value.
-4. Go to **Send** and add recipients. You can either upload a CSV file with columns `wallet_address,amount,employee_name`, or add recipients manually using the form. If adding manually, click **Preview Transfer** after entering the details, then click **Send** to execute the payroll batch.
-5. Switch to the **Employee** page with a recipient wallet to view encrypted receipts and withdraw funds.
+4. Add the spBTC token to your wallet so it appears in your balance. In Braavos, click "Add Token" and paste the token address: `0x023fb056e4b756d0877b4cd09e8f8aff27f89b6844b7a75c73f91fa5b79f52a9`. In ArgentX, go to Settings > Manage Tokens > Add Token and paste the same address.
+5. Go to **Send** and add recipients. You can either upload a CSV file with columns `wallet_address,amount,employee_name`, or add recipients manually using the form. If adding manually, click **Preview Transfer** after entering the details, then click **Send** to execute the payroll batch.
+6. Switch to the **Employee** page with a recipient wallet to view encrypted receipts and withdraw funds.
 
 > **Note:** spBTC is our custom ERC20 token deployed on Starknet Sepolia. You need spBTC tokens in your wallet before you can run payroll. Use the in-app Mint page to get tokens instantly -- no external faucet needed.
 
